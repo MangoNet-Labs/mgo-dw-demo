@@ -1,0 +1,100 @@
+syntax = "v1"
+
+info (
+	title:   "type title here"
+	desc:    "type desc here"
+	author:  "type author here"
+	email:   "type email here"
+	version: "type version here"
+)
+
+type RegisterRequest {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginRequest {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type UserResponse {
+	Id            int64  `json:"id"`
+	Username      string `json:"username"`
+	MgoAddress    string `json:"mgo_address"`
+	SolanaAddress string `json:"solana_address"`
+	Token         string `json:"token,omitempty"`
+}
+
+type GetBalanceByCoinReq {
+	ChainName string `json:"chainName" `
+}
+
+type GetBalanceByCoinResp {
+	CoinType        string                 `json:"coinType"`
+	CoinObjectCount int                    `json:"coinObjectCount"`
+	TotalBalance    string                 `json:"totalBalance"`
+	LockedBalance   map[string]interface{} `json:"lockedBalance"`
+}
+
+type TransactionListReq {
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+	ChainName string `json:"chainName"`
+	Type      int    `json:"type"`
+}
+
+type TransactionListResp {
+	Page     int              `json:"page"`
+	PageSize int              `json:"pageSize"`
+	Total    int64            `json:"total"`
+	List     []MgoTransaction `json:"list"`
+}
+
+type MgoTransaction {
+	ID          int64  `json:"id"`
+	Digest      string `json:"digest"`
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Amount      string `json:"amount,omitempty"`
+	FromAmount  string `json:"from_amount,omitempty"`
+	Checkpoint  string `json:"checkpoint,omitempty"`
+	CoinType    string `json:"coin_type,omitempty"`
+	GasOwner    string `json:"gas_owner,omitempty"`
+	GasPrice    string `json:"gas_price,omitempty"`
+	GasBudget   string `json:"gas_budget,omitempty"`
+	TimestampMs string `json:"timestamp_ms,omitempty"`
+}
+
+type WithdrawalReq {
+	ToAddress string  `json:"toAddress"`
+	ChainName string  `json:"chainName"`
+	Amount    float64 `json:"amount"`
+}
+
+type WithdrawalResp {
+	Hash string `json:"hash"`
+}
+
+@server (
+	tags:   auth/common
+	prefix: /v1
+	group:  common
+)
+service user-api {
+	@handler register
+	post /register (RegisterRequest) returns (UserResponse)
+
+	@handler login
+	post /login (LoginRequest) returns (UserResponse)
+
+	@handler balance
+	post /balance (GetBalanceByCoinReq) returns (GetBalanceByCoinResp)
+
+	@handler transaction
+	post /transaction (TransactionListReq) returns (TransactionListResp)
+
+	@handler withdrawal
+	post /withdrawal (WithdrawalReq) returns (WithdrawalResp)
+}
+
