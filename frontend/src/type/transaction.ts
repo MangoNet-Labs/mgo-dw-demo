@@ -13,12 +13,16 @@ export type TransactionListResp = {
 };
 
 export type MgoTransaction = {
-
-  id: string;
-  hash: string;
-  chainName: string;
-  type: number;
-  timestamp: string;
-  amount: string;
-  status: string;
+  id: number;
+  digest: string;
+  from: string;
+  to: string;
+  amount?: string;
+  from_amount?: string;
+  checkpoint?: string;
+  coin_type?: string;
+  gas_owner?: string;
+  gas_price?: string;
+  gas_budget?: string;
+  timestamp_ms: string;
 };

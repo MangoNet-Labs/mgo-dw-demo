@@ -4,8 +4,8 @@ import "./globals.css";
 import { cn } from "../utils/utils";
 import useGuard from "@/hooks/useGuard";
 import useClientSide from "@/hooks/useClientSide";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,25 +17,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  useGuard()
-  useClientSide()
+  useGuard();
+  useClientSide();
 
   return (
     <html lang="en">
       <body
         className={cn(
           `${geistSans.variable} ${geistMono.variable} antialiased`,
-          `bg-[url('/images/bj.png')] bg-cover bg-center h-[100vh] w-full`
+
+          `max-w-[500px] m-auto  h-[100vh] w-full`
         )}
       >
-        {children}
+        <div
+          className={`bg-[url('/images/bj.png')] bg-cover bg-center h-full w-full`}
+        >
+          {children}
+        </div>
 
         <ToastContainer />
       </body>
