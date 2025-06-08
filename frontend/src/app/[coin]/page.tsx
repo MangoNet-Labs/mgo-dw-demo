@@ -1,5 +1,6 @@
 "use client";
 import { HistoryCell } from "@/components/history/Cell";
+import IfElse from "@/components/logic/if-else";
 import { ComboboxDemo } from "@/components/NetWorkSelect/Index";
 import { Button } from "@/components/ui/button";
 import { transactionEffect } from "@/effector/effector";
@@ -8,13 +9,19 @@ import { ChainType } from "@/type";
 import { copyText } from "@/utils/copy";
 import { getChainNameChainType } from "@/utils/helper";
 import { useUnit } from "effector-react";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { path } from "ramda";
-import { useEffect, useMemo } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { findIndex, mergeRight, path } from "ramda";
+import { Suspense, useEffect, useMemo } from "react";
+import Image from "next/image";
+import { TrType } from "@/components/Tags/TrType";
+import dynamic from "next/dynamic";
+const btns = ["all", "deposit", "withdraw"];
 
-export default function CoinHome() {
+function CoinHome() {
+  const searchParams = useSearchParams();
+
+  const type = searchParams.get("type") ?? "all";
   const params = useParams<{ coin?: ChainType }>();
   const coin = params.coin ?? "mgo";
 
@@ -34,9 +41,9 @@ export default function CoinHome() {
       page: 1,
       pageSize: 100,
       chainName: `${coin}`,
-      type: 0,
+      type: findIndex((e) => e == type, btns),
     });
-  }, [coin]);
+  }, [coin, type]);
 
   return (
     <div className="h-full w-[93%] pt-3.5 m-auto">
@@ -49,7 +56,7 @@ export default function CoinHome() {
           Deposit and Withdrawal DEMO
         </p>
       </div>
-      <div className="my-10 w-full">
+      <div className="my-5 w-full">
         <Link href={`/withdrawal/${coin}`}>
           <Button className="bg-[var(--t-main)] w-full">
             Withdrawal {path(["coinName"], ChainName)}
@@ -58,25 +65,53 @@ export default function CoinHome() {
       </div>
       <div className="flex text-white items-center justify-between">
         <p>{path(["coinName"], ChainName)} Address</p>
-        {/* <Link
-          href={`/qr-code?props=${JSON.stringify(
-            mergeRight(ChainName, { address })
-          )}`}
-        >
-          <ScanQrCode size={18} />
-        </Link> */}
       </div>
 
       <div
         onClick={() => copyText(address)}
-        className="mt-2 w-full p-1.5 rounded-xl bg-[var(--bg-color)] break-words text-white"
+        className="mt-2 w-full p-1.5 rounded-[4px] bg-[var(--bg-color)] break-words text-white"
       >
         {address}
       </div>
-      <div className="mt-3"></div>
-      {list.map((ev) => (
-        <HistoryCell {...ev} key={ev.hash} />
-      ))}
+      <div className="mt-6 flex gap-3">
+        {btns.map((e) => (
+          <TrType coin={coin} type={e} acType={type} key={e} />
+        ))}
+      </div>
+
+      <IfElse prediction={list.length > 0}>
+        <>
+          {list.map((ev) => (
+            <HistoryCell
+              {...mergeRight(ev, ChainName)}
+              address={address}
+              key={ev.digest}
+            />
+          ))}
+        </>
+        <div className="text-center pt-10">
+          <Image
+            src={"/images/niu_data.png"}
+            width={150}
+            height={50}
+            alt={""}
+            className=" m-auto"
+          />
+          <p className="text-[#999] text-base mt-5">No more data yet~</p>
+        </div>
+      </IfElse>
     </div>
+  );
+}
+
+const DynamicCoinHome = dynamic(() => Promise.resolve(CoinHome), {
+  ssr: false,
+});
+
+export default function CoinHomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DynamicCoinHome />
+    </Suspense>
   );
 }

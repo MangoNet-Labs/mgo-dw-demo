@@ -2,7 +2,7 @@ import { withdrawalEffect } from "@/effector/effector";
 import { WithdrawalReq } from "@/type/withdrawal";
 import { useRouter } from "next/navigation";
 
-import { evolve } from "ramda";
+import { evolve, mergeRight } from "ramda";
 import { useEffect } from "react";
 
 export const useWithdrawalEffect = () => {
@@ -16,8 +16,10 @@ export const useWithdrawalEffect = () => {
   };
 
   useEffect(() => {
-    withdrawalEffect.done.watch((payload) => {
-      push(`/withdrawalSuccess?props=${JSON.stringify(payload)}`);
+    withdrawalEffect.done.watch(({ params, result }) => {
+      push(
+        `/withdrawalSuccess?props=${JSON.stringify(mergeRight(params, result))}`
+      );
       return;
     });
   }, []);

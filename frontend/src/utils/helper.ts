@@ -2,10 +2,18 @@ import { ChainType } from "@/type";
 
 import { always, cond, equals } from "ramda";
 
+
+export type CoinInfo = {
+  chainName: string;
+  coinName: string;
+  imgSrc: string;
+  fees: number;
+};
+
 export const getChainNameChainType = cond([
   [
     equals<ChainType>("mgo"),
-    always({
+    always<CoinInfo>({
       chainName: "MGO",
       coinName: "MGO",
       imgSrc: "/images/mgo.png",
@@ -14,7 +22,7 @@ export const getChainNameChainType = cond([
   ],
   [
     equals<ChainType>("sol"),
-    always({
+    always<CoinInfo>({
       chainName: "Solana",
       coinName: "Solana MGO",
       imgSrc: "/images/solana1.png",

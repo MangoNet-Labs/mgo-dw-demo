@@ -3,13 +3,10 @@ import moment from "moment";
 export const formatDateTime = (date: string) => {
   if (!date) return "--";
   if (date.length < 10) return "--";
-  return moment.unix(parseInt(date)).format("YYYY-MM-DD");
+  return moment(parseInt(date)).format("YYYY-MM-DD hh:mm:ss");
 };
 
 export const formatTime = (seconds: number) => {
-  console.log(seconds);
-  // const days = Math.floor(seconds / (24 * 60 * 60));
-  // const hours = Math.floor((seconds % (24 * 60 * 60)) / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = (seconds % 60).toFixed(0);
   return `${mins ? mins : "0"} M : ${secs} S`;
