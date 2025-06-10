@@ -1,9 +1,13 @@
 import moment from "moment";
 
 export const formatDateTime = (date: string) => {
+  date = `${date}`;
   if (!date) return "--";
   if (date.length < 10) return "--";
-  return moment(parseInt(date)).format("YYYY-MM-DD hh:mm:ss");
+  if (date.length == 10) {
+    return moment.unix(parseInt(date)).format("YYYY-MM-DD HH:mm:ss");
+  }
+  return moment(parseInt(date)).format("YYYY-MM-DD HH:mm:ss");
 };
 
 export const formatTime = (seconds: number) => {
@@ -17,6 +21,6 @@ export const calculateDays = (startTime: string, endTime: string) => {
   const date2 = moment.unix(parseInt(endTime));
 
   const diffDays = date2.diff(date1, "days");
- 
+
   return diffDays;
 };

@@ -5,6 +5,7 @@ import { CoinInfo } from "@/utils/helper";
 import { always, ifElse } from "ramda";
 import { useMemo } from "react";
 import Image from "next/image";
+import { bgBalance } from "@/utils/formatBalance";
 
 type Props = {
   address: string;
@@ -31,7 +32,7 @@ export const HistoryCell = ({
           {transferType} {coinName}
         </span>
         <span>
-          {amount} {coinName}
+          {bgBalance(amount)} {coinName}
         </span>
       </h3>
       <div className="flex flex-col gap-1">

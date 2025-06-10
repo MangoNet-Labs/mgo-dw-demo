@@ -8,12 +8,17 @@ import { loginEffect, LoginProps } from "@/effector/effector";
 import { useUnit } from "effector-react";
 import Link from "next/link";
 import useSignedGuard from "@/hooks/useSignedGuard";
-
-
+import { passwordRule, userNameRule } from "@/components/Form/rule";
+import { path } from "ramda";
 export default function Home() {
   const { handel } = useLoginEffect();
   const loginPending = useUnit(loginEffect.pending);
-  const { register, handleSubmit } = useForm<LoginProps>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginProps>();
+  
   useSignedGuard();
   return (
     <form onSubmit={handleSubmit(handel)} className="space-y-4 p-4 h-full">
@@ -40,6 +45,8 @@ export default function Home() {
               {...register("username")}
               label="username"
               placeholder="Please enter"
+              {...register("username", userNameRule)}
+              error={path(["username", "message"], errors)}
             />
 
             <Input
@@ -47,6 +54,8 @@ export default function Home() {
               label="Password"
               type="password"
               placeholder="Please enter"
+              {...register("password", passwordRule)}
+              error={path(["password", "message"], errors)}
             />
           </div>
         </div>
