@@ -94,6 +94,7 @@ func (l *WithdrawalLogic) Withdrawal(req *types.WithdrawalReq, authUser *middlew
 		tx.Pure(amount),
 	})
 	tx.TransferObjects([]transaction.Argument{splitCoin}, tx.Pure(req.ToAddress))
+
 	MgoTransactionBlockResponse, err := tx.Execute(
 		ctx,
 		request.MgoTransactionBlockOptions{
@@ -113,6 +114,8 @@ func (l *WithdrawalLogic) Withdrawal(req *types.WithdrawalReq, authUser *middlew
 }
 
 func (l *WithdrawalLogic) GetEnoughMgo(ctx context.Context, owner string, amount decimal.Decimal, tx *transaction.Transaction) (mergeCoin transaction.Argument, err error) {
+
+	fmt.Println(amount)
 	var sumBanlance decimal.Decimal
 	for {
 		paginatedCoins, err := l.svcCtx.MgoCli.MgoXGetCoins(ctx, request.MgoXGetCoinsRequest{
@@ -127,6 +130,10 @@ func (l *WithdrawalLogic) GetEnoughMgo(ctx context.Context, owner string, amount
 			return mergeCoin, errors.New("no enough mgo")
 		}
 		for _, coin := range paginatedCoins.Data {
+
+			if coin.Balance == "0" {
+				continue
+			}
 			coinBanlance, err := decimal.NewFromString(coin.Balance)
 			if err != nil {
 				return mergeCoin, err

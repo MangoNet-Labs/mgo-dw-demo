@@ -26,9 +26,7 @@ func TransactionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 			httpx.Error(w, errors.New("unauthorized"))
 			return
 		}
-
 		l := common.NewTransactionLogic(r.Context(), svcCtx)
-
 		var (
 			resp *types.TransactionListResp
 			err  error
@@ -45,6 +43,15 @@ func TransactionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		if err != nil {
 			response.FailJson(w, err.Error(), 7)
 		} else {
+
+			if resp == nil {
+				resp = &types.TransactionListResp{
+					PageSize: req.PageSize,
+					Page:     req.Page,
+					List:     []types.MgoTransaction{},
+					Total:    0,
+				}
+			}
 			response.OkJson(w, resp)
 		}
 	}

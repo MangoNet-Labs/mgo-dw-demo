@@ -13,4 +13,5 @@ type Config struct {
 	SysSolPrivateKey string
 	SysMgoPrivateKey string
 	SysGasObject     string
+	HeliusRpc        string
 }
