@@ -123,35 +123,67 @@ func TransactionBlocks(ctx *svc.ServiceContext) error {
 			bc := tx.BalanceChanges
 
 			// Only one-to-one MGO transfers are processed
-			if len(bc) != 2 || !allCoinTypeMatch(bc, "0x2::mgo::MGO") {
+			if len(bc) < 2 || !allCoinTypeMatch(bc, "0x2::mgo::MGO") {
 				continue
 			}
 
 			var from, to, amount, fromAmount string
 
-			for _, change := range bc {
-				if strings.HasPrefix(change.Amount, "-") {
-					from = change.Owner.AddressOwner
-					fromAmount = change.Amount
-				} else {
-					to = change.Owner.AddressOwner
-					amount = change.Amount
+			if len(bc) == 2 {
+
+				for _, change := range bc {
+					if strings.HasPrefix(change.Amount, "-") {
+						from = change.Owner.AddressOwner
+						fromAmount = change.Amount
+					} else {
+						to = change.Owner.AddressOwner
+						amount = change.Amount
+					}
 				}
+
+				mgoTxs = append(mgoTxs, model.MgoTransaction{
+					Digest:      tx.Digest,
+					From:        from,
+					To:          to,
+					Amount:      amount,
+					FromAmount:  fromAmount,
+					Checkpoint:  tx.Checkpoint,
+					CoinType:    bc[0].CoinType,
+					GasOwner:    tx.Transaction.Data.GasData.Owner,
+					GasPrice:    tx.Transaction.Data.GasData.Price,
+					GasBudget:   tx.Transaction.Data.GasData.Budget,
+					TimestampMs: tx.TimestampMs,
+				})
+			} else {
+
+				for _, change := range bc {
+					if strings.HasPrefix(change.Amount, "-") {
+						if change.Owner.AddressOwner == tx.Transaction.Data.GasData.Owner {
+							continue
+						}
+						from = change.Owner.AddressOwner
+						fromAmount = change.Amount
+					} else {
+						to = change.Owner.AddressOwner
+						amount = change.Amount
+					}
+				}
+
+				mgoTxs = append(mgoTxs, model.MgoTransaction{
+					Digest:      tx.Digest,
+					From:        from,
+					To:          to,
+					Amount:      amount,
+					FromAmount:  fromAmount,
+					Checkpoint:  tx.Checkpoint,
+					CoinType:    bc[0].CoinType,
+					GasOwner:    tx.Transaction.Data.GasData.Owner,
+					GasPrice:    tx.Transaction.Data.GasData.Price,
+					GasBudget:   tx.Transaction.Data.GasData.Budget,
+					TimestampMs: tx.TimestampMs,
+				})
 			}
 
-			mgoTxs = append(mgoTxs, model.MgoTransaction{
-				Digest:      tx.Digest,
-				From:        from,
-				To:          to,
-				Amount:      amount,
-				FromAmount:  fromAmount,
-				Checkpoint:  tx.Checkpoint,
-				CoinType:    bc[0].CoinType,
-				GasOwner:    tx.Transaction.Data.GasData.Owner,
-				GasPrice:    tx.Transaction.Data.GasData.Price,
-				GasBudget:   tx.Transaction.Data.GasData.Budget,
-				TimestampMs: tx.TimestampMs,
-			})
 		}
 
 		if len(mgoTxs) > 0 {
@@ -159,7 +191,6 @@ func TransactionBlocks(ctx *svc.ServiceContext) error {
 				return fmt.Errorf("failed to save mgo transactions: %w", err)
 			}
 		}
-
 		updatedSeqs = append(updatedSeqs, checkpoint.SequenceNumber)
 
 	}

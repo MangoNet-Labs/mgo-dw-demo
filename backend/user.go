@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	cron "user/core"
 	"user/internal/config"
 	"user/internal/handler"
 	"user/internal/svc"
@@ -24,9 +25,9 @@ func main() {
 	handler.RegisterHandlers(server, ctx)
 
 	//Storage Checkpoints
-	//cron.StartCheckpointSync(ctx)
+	cron.StartCheckpointSync(ctx)
 	//Query checkpoint transactions
-	//cron.TransactionBlocksSync(ctx)
+	cron.TransactionBlocksSync(ctx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()

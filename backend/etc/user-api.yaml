@@ -2,7 +2,7 @@ Name: user-api
 Host: 0.0.0.0
 Port: 8888
 
-DataSource: your databas
+DataSource: your  database
 
 Auth:
   AccessSecret: ""
@@ -11,3 +11,4 @@ SplToken: "HdUEsuMTsDM3NWHQG44kztjCm4otSQECpJHZLRnz1AE8"
 SysSolPrivateKey: "2K4PRETakWLGwzWYcdkqxv7fw19E7VD3ME9g5dQpAP1KPYsuKLwka1Q7ayputdv3m6EwqJ4357bZn3LUPVH2cHYd"
 SysMgoPrivateKey: "0xbf08566aaddeec9384eff8102169cf0a8d4a9170a865ca967841eca969b9e067"
 SysGasObject: "0x535d75b69783f826a648d7570a0634557111fa3e61ab5b3057e0fa339c37789c"
+HeliusRpc: "https://devnet.helius-rpc.com/?api-key=cfbb7daa-b0b2-499d-a9ac-e51aef5b7b98"
