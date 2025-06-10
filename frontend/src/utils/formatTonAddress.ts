@@ -13,3 +13,14 @@ export function formatAddress(address: string | null | undefined): string {
     return "err";
   }
 }
+
+export function getAddressType(address: string) {
+  const isMgo = /^0x[a-fA-F0-9]{64}$/.test(address);
+
+  const isSolana = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+
+  if (isMgo) return "mgo";
+  if (isSolana) return "sol";
+
+  return "unknown";
+}

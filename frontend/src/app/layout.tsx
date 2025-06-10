@@ -1,5 +1,5 @@
 "use client";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { cn } from "../utils/utils";
 import useGuard from "@/hooks/useGuard";
@@ -7,15 +7,12 @@ import useClientSide from "@/hooks/useClientSide";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
 
 export default function RootLayout({
   children,
@@ -29,7 +26,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={cn(
-          `${geistSans.variable} ${geistMono.variable} antialiased`,
+          `${montserrat.className} antialiased`,
 
           `max-w-[500px] m-auto  h-[100vh] w-full`
         )}

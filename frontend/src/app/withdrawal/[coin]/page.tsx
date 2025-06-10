@@ -12,11 +12,13 @@ import { WithdrawalReq } from "@/type/withdrawal";
 import { getChainNameChainType } from "@/utils/helper";
 import { useUnit } from "effector-react";
 import { useParams } from "next/navigation";
-import { mergeRight, path, pipe } from "ramda";
+import { always, equals, ifElse, mergeRight, path, pipe } from "ramda";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import Image from "next/image";
 import Smin from "@/components/Text/Smin";
+import { amountRule, requiredRule } from "@/components/Form/rule";
+import { getAddressType } from "@/utils/formatTonAddress";
 
 export default function Withdrawal() {
   const { coin } = useParams<{
@@ -29,7 +31,12 @@ export default function Withdrawal() {
 
   const { handel } = useWithdrawalEffect();
 
-  const { register, handleSubmit, watch } = useForm<WithdrawalReq>();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<WithdrawalReq>();
 
   const amountValue = watch("amount");
 
@@ -51,7 +58,20 @@ export default function Withdrawal() {
             <div>
               <Smin text="Receiving Address" />
               <div className="h-1"></div>
-              <Textarea {...register("toAddress")} placeholder="" />
+              <Textarea
+                error={path(["toAddress", "message"], errors)}
+                {...register(
+                  "toAddress",
+                  mergeRight(requiredRule, {
+                    validate: ifElse(
+                      (val: string) => equals(getAddressType(val), coin),
+                      always(true),
+                      always("Illegal address")
+                    ),
+                  })
+                )}
+                placeholder=""
+              />
             </div>
 
             <div>
@@ -73,13 +93,6 @@ export default function Withdrawal() {
                 </div>
                 <p>{path(["chainName"], chainBase)}</p>
               </div>
-              {/* <Input
-                {...register("chainName")}
-                disabled
-                className="uppercase"
-                label=""
-                value={coin}
-              /> */}
             </div>
 
             <div>
@@ -87,7 +100,16 @@ export default function Withdrawal() {
               <div className="py-1">
                 <Input
                   label=""
-                  {...register("amount")}
+                  {...register(
+                    "amount",
+                    mergeRight(amountRule, {
+                      max: {
+                        value: totalBalance,
+                        message: "Insufficient balance",
+                      },
+                    })
+                  )}
+                  error={path(["amount", "message"], errors)}
                   placeholder=""
                 />
               </div>
@@ -107,16 +129,24 @@ export default function Withdrawal() {
                 "flex-1 text-[var(--text-s)] text-[12px] py-4 border-y border-[var(--t-border)]"
               )}
             >
-              <p>1, Check the withdrawal address carefully to ensure it is correct.</p>
-              <p>2, Confirm that the account balance is sufficient to meet the withdrawal requirements.</p>
+              <p>
+                1, Check the withdrawal address carefully to ensure it is
+                correct.
+              </p>
+              <p>
+                2, Confirm that the account balance is sufficient to meet the
+                withdrawal requirements.
+              </p>
             </div>
           </div>
 
           <div className="w-full py-4 flex justify-between items-end">
             <div>
-              <p className="text-[10px] text-[var(--text-s)]">Amount of funds received</p>
+              <p className="text-[10px] text-[var(--text-s)]">
+                Amount of funds received
+              </p>
               <p className="text-[12px] text-white">
-                {amountValue ?? '--'} {path(["coinName"], chainBase)}
+                {amountValue ?? "--"} {path(["coinName"], chainBase)}
               </p>
               <p className="text-[10px] text-[var(--text-s)]">
                 Network Fees{" "}
