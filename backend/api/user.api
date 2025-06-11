@@ -51,6 +51,13 @@ type TransactionListResp {
 	List     []MgoTransaction `json:"list"`
 }
 
+type TransactionSolResp {
+	Page     int              `json:"page"`
+	PageSize int              `json:"pageSize"`
+	Total    int64            `json:"total"`
+	List     []SolTransaction `json:"list"`
+}
+
 type MgoTransaction {
 	ID          int64  `json:"id"`
 	Digest      string `json:"digest"`
@@ -59,6 +66,21 @@ type MgoTransaction {
 	Amount      string `json:"amount,omitempty"`
 	FromAmount  string `json:"from_amount,omitempty"`
 	Checkpoint  string `json:"checkpoint,omitempty"`
+	CoinType    string `json:"coin_type,omitempty"`
+	GasOwner    string `json:"gas_owner,omitempty"`
+	GasPrice    string `json:"gas_price,omitempty"`
+	GasBudget   string `json:"gas_budget,omitempty"`
+	TimestampMs string `json:"timestamp_ms,omitempty"`
+}
+
+type SolTransaction {
+	ID          int64  `json:"id"`
+	Digest      string `json:"digest"`
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Amount      string `json:"amount,omitempty"`
+	FromAmount  string `json:"from_amount,omitempty"`
+	Checkpoint  uint64 `json:"checkpoint,omitempty"`
 	CoinType    string `json:"coin_type,omitempty"`
 	GasOwner    string `json:"gas_owner,omitempty"`
 	GasPrice    string `json:"gas_price,omitempty"`
