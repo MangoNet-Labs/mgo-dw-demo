@@ -1,9 +1,15 @@
 package cron
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/gagliardetto/solana-go/rpc/jsonrpc"
 	mgoModel "github.com/mangonet-labs/mgo-go-sdk/model"
 	"log"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -214,4 +220,234 @@ func allCoinTypeMatch(balanceChanges []mgoModel.BalanceChanges, target string) b
 		}
 	}
 	return true
+}
+
+func TransactionSignatureSync(ctx *svc.ServiceContext) {
+
+	ticker := time.NewTicker(2 * time.Second)
+	go func() {
+		for range ticker.C {
+			taskMutex.Lock()
+			if taskRunning {
+				taskMutex.Unlock()
+				continue // The previous task has not been completed yet
+			}
+			taskRunning = true
+			taskMutex.Unlock()
+			if err := TransactionSignatureBlocks(ctx); err != nil {
+				log.Println("Checkpoint sync error:", err.Error())
+			}
+			taskMutex.Lock()
+			taskRunning = false
+			taskMutex.Unlock()
+		}
+	}()
+
+}
+
+func TransactionSignatureBlocks(ctx *svc.ServiceContext) error {
+
+	var checkpoints []model.SolTransaction
+	err := ctx.DB.Select("id,digest,status,gas_owner").Where("status = 0 ").Limit(10).Find(&checkpoints).Error
+	if err != nil {
+		return err
+	}
+	url := ctx.Config.HeliusRpc
+	ctxBack := context.Background()
+	for _, signature := range checkpoints {
+
+		reqBody := jsonrpc.RPCRequest{
+			JSONRPC: "2.0",
+			ID:      "1",
+			Method:  "getTransaction",
+			Params: []interface{}{
+				signature.Digest,
+				"jsonParsed",
+			},
+		}
+		payload, err := json.Marshal(reqBody)
+		if err != nil {
+			fmt.Println("json marshal error:", err)
+			continue
+		}
+		reqResult, err := http.NewRequestWithContext(ctxBack, "POST", url, bytes.NewBuffer(payload))
+		if err != nil {
+			fmt.Println("http request error:", err)
+			continue
+		}
+		reqResult.Header.Set("Content-Type", "application/json")
+		transactionResult, err := ctx.Client.Do(reqResult)
+		if err != nil {
+			fmt.Println("http request error:", err)
+			continue
+		}
+		defer transactionResult.Body.Close()
+		var rpcResp Transaction
+		if err := json.NewDecoder(transactionResult.Body).Decode(&rpcResp); err != nil {
+			fmt.Println("json unmarshal error:", err)
+			continue
+		}
+
+		if len(rpcResp.Result.Meta.InnerInstructions) > 0 {
+			for _, innerInstruction := range rpcResp.Result.Meta.InnerInstructions {
+				for _, instruction := range innerInstruction.Instructions {
+					if instruction.Parsed.Type == "mintTo" {
+						info := instruction.Parsed.Info
+						tx := model.SolTransaction{
+							From:     info.Mint,
+							To:       signature.GasOwner,
+							Amount:   info.Amount,
+							CoinType: ctx.Config.SplToken,
+							GasPrice: strconv.Itoa(rpcResp.Result.Meta.Fee),
+							Status:   1,
+						}
+						ctx.DB.Where("id = ?", signature.ID).Updates(&tx)
+					}
+				}
+			}
+		}
+
+		for _, instr := range rpcResp.Result.Transaction.Message.Instructions {
+
+			if instr.Parsed.Type == "transfer" {
+				info := instr.Parsed.Info
+				To := info.Destination
+				if len(rpcResp.Result.Meta.PostTokenBalances) == 1 {
+					To = rpcResp.Result.Meta.PostTokenBalances[0].Owner
+				} else if len(rpcResp.Result.Meta.PostTokenBalances) == 2 {
+					To = rpcResp.Result.Meta.PostTokenBalances[1].Owner
+				}
+				tx := model.SolTransaction{
+					From:     info.Authority,
+					To:       To,
+					Amount:   info.Amount,
+					CoinType: ctx.Config.SplToken,
+					GasPrice: strconv.Itoa(rpcResp.Result.Meta.Fee),
+					Status:   1,
+				}
+				ctx.DB.Where("id = ?", signature.ID).Updates(&tx)
+			} else if instr.Parsed.Type == "transferChecked" {
+
+				info := instr.Parsed.Info
+				To := info.Destination
+				if len(rpcResp.Result.Meta.PostTokenBalances) == 1 {
+					To = rpcResp.Result.Meta.PostTokenBalances[0].Owner
+				} else if len(rpcResp.Result.Meta.PostTokenBalances) == 2 {
+					To = rpcResp.Result.Meta.PostTokenBalances[1].Owner
+				}
+				tx := model.SolTransaction{
+					From:     info.MultisigAuthority,
+					To:       To,
+					Amount:   info.TokenAmount.Amount,
+					CoinType: ctx.Config.SplToken,
+					GasPrice: strconv.Itoa(rpcResp.Result.Meta.Fee),
+					Status:   1,
+				}
+				ctx.DB.Where("id = ?", signature.ID).Updates(&tx)
+			}
+		}
+		ctx.DB.Where("id = ?", signature.ID).Update("status", "1")
+
+	}
+
+	return nil
+
+}
+
+type Transaction struct {
+	Jsonrpc string `json:"jsonrpc"`
+	Result  struct {
+		BlockTime int `json:"blockTime"`
+		Meta      struct {
+			ComputeUnitsConsumed int         `json:"computeUnitsConsumed"`
+			CostUnits            int         `json:"costUnits"`
+			Err                  interface{} `json:"err"`
+			Fee                  int         `json:"fee"`
+			InnerInstructions    []struct {
+				Index        int `json:"index"`
+				Instructions []struct {
+					Parsed struct {
+						Info struct {
+							Account       string `json:"account"`
+							Amount        string `json:"amount"`
+							Mint          string `json:"mint"`
+							MintAuthority string `json:"mintAuthority"`
+						} `json:"info"`
+						Type string `json:"type"`
+					} `json:"parsed"`
+					Program     string `json:"program"`
+					ProgramId   string `json:"programId"`
+					StackHeight int    `json:"stackHeight"`
+				} `json:"instructions"`
+			} `json:"innerInstructions"`
+			LogMessages       []string `json:"logMessages"`
+			PostBalances      []int64  `json:"postBalances"`
+			PostTokenBalances []struct {
+				AccountIndex  int    `json:"accountIndex"`
+				Mint          string `json:"mint"`
+				Owner         string `json:"owner"`
+				ProgramId     string `json:"programId"`
+				UiTokenAmount struct {
+					Amount         string  `json:"amount"`
+					Decimals       int     `json:"decimals"`
+					UiAmount       float64 `json:"uiAmount"`
+					UiAmountString string  `json:"uiAmountString"`
+				} `json:"uiTokenAmount"`
+			} `json:"postTokenBalances"`
+			PreBalances      []int64 `json:"preBalances"`
+			PreTokenBalances []struct {
+				AccountIndex  int    `json:"accountIndex"`
+				Mint          string `json:"mint"`
+				Owner         string `json:"owner"`
+				ProgramId     string `json:"programId"`
+				UiTokenAmount struct {
+					Amount         string  `json:"amount"`
+					Decimals       int     `json:"decimals"`
+					UiAmount       float64 `json:"uiAmount"`
+					UiAmountString string  `json:"uiAmountString"`
+				} `json:"uiTokenAmount"`
+			} `json:"preTokenBalances"`
+			Rewards []interface{} `json:"rewards"`
+			Status  struct {
+				Ok interface{} `json:"Ok"`
+			} `json:"status"`
+		} `json:"meta"`
+		Slot        int `json:"slot"`
+		Transaction struct {
+			Message struct {
+				AccountKeys []struct {
+					Pubkey   string `json:"pubkey"`
+					Signer   bool   `json:"signer"`
+					Source   string `json:"source"`
+					Writable bool   `json:"writable"`
+				} `json:"accountKeys"`
+				Instructions []struct {
+					Parsed struct {
+						Info struct {
+							Amount            string   `json:"amount"`
+							Authority         string   `json:"authority"`
+							Destination       string   `json:"destination"`
+							Source            string   `json:"source"`
+							Mint              string   `json:"mint"`
+							MultisigAuthority string   `json:"multisigAuthority"`
+							Signers           []string `json:"signers"`
+							TokenAmount       struct {
+								Amount         string  `json:"amount"`
+								Decimals       int     `json:"decimals"`
+								UiAmount       float64 `json:"uiAmount"`
+								UiAmountString string  `json:"uiAmountString"`
+							} `json:"tokenAmount"`
+						} `json:"info"`
+						Type string `json:"type"`
+					} `json:"parsed"`
+					Program     string `json:"program"`
+					ProgramId   string `json:"programId"`
+					StackHeight int    `json:"stackHeight"`
+				} `json:"instructions"`
+				RecentBlockhash string `json:"recentBlockhash"`
+			} `json:"message"`
+			Signatures []string `json:"signatures"`
+		} `json:"transaction"`
+	} `json:"result"`
+	Id string `json:"id"`
 }

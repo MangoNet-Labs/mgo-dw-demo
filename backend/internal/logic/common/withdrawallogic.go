@@ -52,20 +52,25 @@ func (l *WithdrawalLogic) Withdrawal(req *types.WithdrawalReq, authUser *middlew
 	if Balance < req.Amount {
 		return nil, errors.New("insufficient cash withdrawal amount")
 	}
+	//Initializes the Mango SDK client and context
 	cli := l.svcCtx.MgoCli
 	var ctx = context.Background()
+	//Loads the user wallet's private key to create a walletKey, which will be the transaction signer.
 	walletKey, err := keypair.NewKeypairWithPrivateKey(config.Ed25519Flag, user.MgoPrivateKey)
 	if err != nil {
 		return nil, err
 	}
+	//Loads the system sponsor account key, which will cover the gas cost of the transaction.
 	sysKey, err := keypair.NewKeypairWithPrivateKey(config.Ed25519Flag, l.svcCtx.Config.SysMgoPrivateKey)
 	if err != nil {
 		return nil, err
 	}
+	//Retrieves the object data of the sponsor's gas coin, needed to pay for the transaction gas.
 	gasCoinObj, err := cli.MgoGetObject(ctx, request.MgoGetObjectRequest{ObjectId: l.svcCtx.Config.SysGasObject})
 	if err != nil {
 		return nil, err
 	}
+	//Builds a MgoObjectRef to reference the gas coin in the transaction.
 	gasCoin, err := transaction.NewMgoObjectRef(
 		mgoModel.MgoAddress(gasCoinObj.Data.ObjectId),
 		gasCoinObj.Data.Version,
@@ -76,20 +81,22 @@ func (l *WithdrawalLogic) Withdrawal(req *types.WithdrawalReq, authUser *middlew
 	}
 	tx := transaction.NewTransaction()
 	tx.SetMgoClient(cli).
-		SetSigner(walletKey).
-		SetSponsoredSigner(sysKey).
-		SetSender(mgoModel.MgoAddress(walletKey.MgoAddress())).
-		SetGasPrice(1000).
+		SetSigner(walletKey).                                   //the user's key signs the transaction.
+		SetSponsoredSigner(sysKey).                             //the system account pays the gas.
+		SetSender(mgoModel.MgoAddress(walletKey.MgoAddress())). //the user who is sending the coin.
+		SetGasPrice(1000).                                      //the object ID used to pay the gas
 		SetGasBudget(50000000).
 		SetGasPayment([]transaction.MgoObjectRef{*gasCoin}).
-		SetGasOwner(mgoModel.MgoAddress(sysKey.MgoAddress()))
-
+		SetGasOwner(mgoModel.MgoAddress(sysKey.MgoAddress())) //the sponsor (gas payer) address.
+	// Calculate raw integer amount for transfer (in nano units)
 	amountDecimal := decimal.NewFromFloat(req.Amount)
 	amount := amountDecimal.Mul(decimal.New(1, 9)).BigInt().Uint64()
+	// Collect a large enough coin to split from
 	mergeCoin, err := l.GetEnoughMgo(ctx, walletKey.MgoAddress(), amountDecimal.Mul(decimal.New(1, 9)), tx)
 	if err != nil {
 		return nil, err
 	}
+	// Split out the exact transfer amount
 	splitCoin := tx.SplitCoins(mergeCoin, []transaction.Argument{
 		tx.Pure(amount),
 	})

@@ -28,14 +28,15 @@ func TransactionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		}
 		l := common.NewTransactionLogic(r.Context(), svcCtx)
 		var (
-			resp *types.TransactionListResp
-			err  error
+			resp    *types.TransactionListResp
+			respSol *types.TransactionSolResp
+			err     error
 		)
 		switch req.ChainName {
 		case "mgo":
 			resp, err = l.Transaction(&req, authUser)
 		case "sol":
-			resp, err = l.TransactionSol(&req, authUser)
+			respSol, err = l.TransactionSol(&req, authUser)
 		default:
 			response.FailJson(w, "Parameter error", 7)
 			return
@@ -43,7 +44,6 @@ func TransactionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		if err != nil {
 			response.FailJson(w, err.Error(), 7)
 		} else {
-
 			if resp == nil {
 				resp = &types.TransactionListResp{
 					PageSize: req.PageSize,
@@ -52,7 +52,11 @@ func TransactionHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					Total:    0,
 				}
 			}
-			response.OkJson(w, resp)
+			if req.ChainName == "mgo" {
+				response.OkJson(w, resp)
+			} else {
+				response.OkJson(w, respSol)
+			}
 		}
 	}
 }

@@ -39,6 +39,21 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+type SolTransaction struct {
+	ID          int64  `json:"id"`
+	Digest      string `json:"digest"`
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Amount      string `json:"amount,omitempty"`
+	FromAmount  string `json:"from_amount,omitempty"`
+	Checkpoint  uint64 `json:"checkpoint,omitempty"`
+	CoinType    string `json:"coin_type,omitempty"`
+	GasOwner    string `json:"gas_owner,omitempty"`
+	GasPrice    string `json:"gas_price,omitempty"`
+	GasBudget   string `json:"gas_budget,omitempty"`
+	TimestampMs string `json:"timestamp_ms,omitempty"`
+}
+
 type TransactionListReq struct {
 	Page      int    `json:"page"`
 	PageSize  int    `json:"pageSize"`
@@ -51,6 +66,13 @@ type TransactionListResp struct {
 	PageSize int              `json:"pageSize"`
 	Total    int64            `json:"total"`
 	List     []MgoTransaction `json:"list"`
+}
+
+type TransactionSolResp struct {
+	Page     int              `json:"page"`
+	PageSize int              `json:"pageSize"`
+	Total    int64            `json:"total"`
+	List     []SolTransaction `json:"list"`
 }
 
 type UserResponse struct {
